@@ -1,4 +1,4 @@
-local cookie = require('cookie');
+local Cookie = require('cookie');
 local COOKIE_ATTR = {
     domain = 'example.com',
     path = '/',
@@ -6,34 +6,34 @@ local COOKIE_ATTR = {
     secure = true,
     httpOnly = true
 };
-local baker;
+local cookie;
 
 -- test invalid arguments
-ifNotNil( cookie.Baker.new( nil, nil ) );
-ifNotNil( cookie.Baker.new( 'example', 1 ) );
+ifNotNil( Cookie.new( nil, nil ) );
+ifNotNil( Cookie.new( 'example', 1 ) );
 -- test invalid attribute
-ifNotNil( cookie.Baker.new( 'example', {
+ifNotNil( Cookie.new( 'example', {
     domain = 0
 } ) );
-ifNotNil( cookie.Baker.new( 'example', {
+ifNotNil( Cookie.new( 'example', {
     path = 0
 } ) );
-ifNotNil( cookie.Baker.new( 'example', {
+ifNotNil( Cookie.new( 'example', {
     expires = 0/0
 } ) );
-ifNotNil( cookie.Baker.new( 'example', {
+ifNotNil( Cookie.new( 'example', {
     secure = 'invalid'
 } ) );
-ifNotNil( cookie.Baker.new( 'example', {
+ifNotNil( Cookie.new( 'example', {
     httpOnly = 'invalid'
 } ) );
 -- test valid
-ifNil( cookie.Baker.new( 'example' ) );
-baker = ifNil( cookie.Baker.new( 'example', COOKIE_ATTR ) );
+ifNil( Cookie.new( 'example' ) );
+cookie = ifNil( Cookie.new( 'example', COOKIE_ATTR ) );
 
 -- test invalid argumnt
-ifNotNil( baker:bake() );
-ifNotNil( baker:bake(1) );
-ifNotNil( baker:bake(true) );
-ifNotNil( baker:bake({}) );
-ifNil( baker:bake('test') );
+ifNotNil( cookie:bake() );
+ifNotNil( cookie:bake(1) );
+ifNotNil( cookie:bake(true) );
+ifNotNil( cookie:bake({}) );
+ifNil( cookie:bake('test') );
