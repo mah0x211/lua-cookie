@@ -67,8 +67,10 @@ local function parseAttr( attr, callback )
     end
 end
 
+-- class
+local Cookie = require('halo').class.Cookie;
 
-local function parse( cookies )
+function Cookie.parse( cookies )
     local tbl = {};
     
     if not cookies then
@@ -85,7 +87,7 @@ local function parse( cookies )
 end
 
 
-local function bake( name, val, attr )
+function Cookie.bake( name, val, attr )
     local c, err
     
     if not typeof.string( name ) then
@@ -116,10 +118,7 @@ local function bake( name, val, attr )
 end
 
 
--- class
-local Baker = require('halo').class.Baker;
-
-function Baker:__index( field )
+function Cookie:__index( field )
     local own = protected(self);
     
     if field == 'name' then
@@ -130,7 +129,7 @@ function Baker:__index( field )
 end
 
 
-function Baker:init( name, attr )
+function Cookie:init( name, attr )
     local own = protected(self);
     local tbl = {};
     local err;
@@ -153,16 +152,12 @@ function Baker:init( name, attr )
 end
 
 
-function Baker:bake( val )
+function Cookie:bake( val )
     local own = protected(self);
     
-    return bake( own.name, val, own.attr );
+    return Cookie.bake( own.name, val, own.attr );
 end
 
 
-return {
-    parse       = parse,
-    bake        = bake,
-    Baker       = Baker.exports
-};
+return Cookie.exports;
 
