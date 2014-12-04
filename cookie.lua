@@ -34,7 +34,7 @@ local EATTR = 'attr.%s must be %s';
 local ATTRS = { 
     domain = 'string',
     path = 'string',
-    expires = 'finite',
+    expires = 'int',
     secure = 'boolean',
     httpOnly = 'boolean'
 };
@@ -53,8 +53,8 @@ local function parseAttr( attr, callback )
         v = attr[k];
         if v ~= nil then
             if not typeof[t]( v ) then
-                if t == 'finite' then
-                    return EATTR:format( k, 'finite number' );
+                if t == 'int' then
+                    return EATTR:format( k, 'integer' );
                 else
                     return EATTR:format( k, t );
                 end
