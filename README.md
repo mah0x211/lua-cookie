@@ -48,7 +48,6 @@ print( inspect( { tbl, err } ) );
 ```lua
 local inspect = require('util').inspect;
 local cookie = require('cookie');
-local cookiestr = 'cookie1=val1; cookie2=val2';
 local str, err = cookie.bake( 'example', 'val', {
     domain = 'example.com',
     path = '/',
