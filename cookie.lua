@@ -104,7 +104,7 @@ function Cookie.bake( name, val, attr )
                 exp:addseconds( v );
                 exp = exp:fmt('${rfc1123}');
                 c = c .. '; expires=' .. exp .. '; max-age=' .. exp;
-            elseif v == 'boolean' and v then
+            elseif t == 'boolean' and v then
                 c = c .. '; ' .. k;
             end
         end);
