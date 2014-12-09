@@ -12,8 +12,9 @@ description = {
 dependencies = {
     "lua >= 5.1",
     "date >= 2.1.1-1",
-    "halo >= 1.1",
-    "util >= 1.2.0"
+    "halo >= 1.1.0",
+    "util >= 1.2.0",
+    "rfcvalid >= 0.1.0"
 }
 build = {
     type = "builtin",

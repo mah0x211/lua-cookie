@@ -27,6 +27,8 @@
 
 -- modules
 local date = require('date');
+local isCookieName = require('rfcvalid.6265').isCookieName;
+local isCookieValue = require('rfcvalid.6265').isCookieValue;
 local typeof = require('util').typeof;
 local EATTR = 'attr.%s must be %s';
 -- constants
@@ -67,6 +69,7 @@ local function parseAttr( attr, callback )
     end
 end
 
+
 -- class
 local Cookie = require('halo').class.Cookie;
 
@@ -90,10 +93,12 @@ end
 function Cookie.bake( name, val, attr )
     local c, err
     
-    if not typeof.string( name ) then
-        err = 'name must be string';
-    elseif not typeof.string( val ) then
-        err = 'val must be string';
+    -- with trim option
+    name = isCookieName( name, true );
+    if not name then
+        err = 'name must be valid cookie-name string';
+    elseif not isCookieValue( val ) then
+        err = 'val must be valid cookie-value string';
     else
         c = name .. '=' .. val;
         err = parseAttr( attr or {}, function( k, v, t )
@@ -134,8 +139,8 @@ function Cookie:init( name, attr )
     local tbl = {};
     local err;
     
-    if type(name) ~= 'string' then
-        err = 'name must be string';
+    if not isCookieName( name ) then
+        err = 'name must be valid cookie-name string';
     elseif attr then
         err = parseAttr( attr, function( k, v, t )
             tbl[k] = v;
