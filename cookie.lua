@@ -60,7 +60,11 @@ local function parseAttr( attr, callback )
                 else
                     return EATTR:format( k, t );
                 end
+            -- eliminate a port number
+            elseif k == 'domain' then
+                v = v:match('^[^:]+') or '';
             end
+
             err = callback( k, v, t );
             if err then
                 return err;
