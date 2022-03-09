@@ -22,7 +22,7 @@ function testcase.bake()
                     domain = 'example.com',
                     path = '/',
                     secure = true,
-                    httpOnly = true,
+                    httponly = true,
                 },
             },
             exp = 'example=val; Expires=[^;]*; Max%-Age=1; Domain=example%.com; Path=/; Secure; HttpOnly',
@@ -73,10 +73,10 @@ function testcase.bake()
                 'foo',
                 'bar',
                 {
-                    httpOnly = 'foo',
+                    httponly = 'foo',
                 },
             },
-            exp = 'attr.httpOnly must be boolean',
+            exp = 'attr.httponly must be boolean',
         },
         {
             args = {

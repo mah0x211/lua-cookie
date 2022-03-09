@@ -67,7 +67,7 @@ local function verify(maxage, secure, httponly, samesite, domain, path)
     elseif secure ~= nil and type(secure) ~= 'boolean' then
         return false, 'secure must be boolean'
     elseif httponly ~= nil and type(httponly) ~= 'boolean' then
-        return false, 'httpOnly must be boolean'
+        return false, 'httponly must be boolean'
     elseif samesite ~= nil and
         (type(samesite) ~= 'string' or not SAMESITE[samesite]) then
         return false, 'samesite must be "strict", "lax" or "none"'
@@ -161,7 +161,7 @@ local function bake(name, val, attr)
     end
 
     attr = attr or {}
-    local ok, err = verify(attr.expires, attr.secure, attr.httpOnly, nil,
+    local ok, err = verify(attr.expires, attr.secure, attr.httponly, nil,
                            attr.domain, attr.path)
     if not ok then
         return nil, 'attr.' .. err
@@ -183,7 +183,7 @@ local function bake(name, val, attr)
     if attr.secure then
         c[#c + 1] = 'Secure'
     end
-    if attr.httpOnly then
+    if attr.httponly then
         c[#c + 1] = 'HttpOnly'
     end
 
@@ -212,7 +212,7 @@ local function new(name, attr)
     end
 
     attr = attr or {}
-    local ok, err = verify(attr.expires, attr.secure, attr.httpOnly, nil,
+    local ok, err = verify(attr.expires, attr.secure, attr.httponly, nil,
                            attr.domain, attr.path)
     if not ok then
         error('attr.' .. err, 2)

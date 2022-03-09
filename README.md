@@ -51,7 +51,7 @@ local str, err = cookie.bake( 'example', 'val', {
     path = '/',
     expires = 1,
     secure = true,
-    httpOnly = true
+    httponly = true
 })
 
 print( dump( { str, err } ) )
@@ -71,5 +71,5 @@ print( dump( { str, err } ) )
   - `path`: string - path string for cookie.
   - `expires`: int - seconds.
   - `secure`: boolean - append secure attribute.
-  - `httpOnly`: boolean - append httpOnly attribute.
+  - `httponly`: boolean - append httponly attribute.
 
