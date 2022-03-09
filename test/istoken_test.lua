@@ -12,6 +12,7 @@ function testcase.istoken()
 
     -- test that return a false
     for _, v in ipairs({
+        '',
         'foo barbaz',
         'foo;barbaz',
         'foobar=',
