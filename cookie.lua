@@ -101,7 +101,6 @@ end
 --- parse
 --- @param cookies string
 --- @return table cookies
---- @return string err
 local function parse(cookies)
     if type(cookies) ~= 'string' then
         error('cookies must be string', 2)
@@ -146,25 +145,20 @@ end
 --- @param val string
 --- @param attr table
 --- @return string cookie
---- @return string err
 local function bake(name, val, attr)
-    if type(name) ~= 'string' then
-        error('name must be string', 2)
-    elseif type(val) ~= 'string' then
-        error('val must be string', 2)
+    if type(name) ~= 'string' or not istoken(name) then
+        error('name must be valid cookie-name', 2)
+    elseif type(val) ~= 'string' or not iscookie(val) then
+        error('val must be valid cookie-value', 2)
     elseif attr ~= nil and type(attr) ~= 'table' then
         error('attr must be table', 2)
-    elseif not istoken(name) then
-        return nil, 'name is not valid cookie-name'
-    elseif not iscookie(val) then
-        return nil, 'val is not valid cookie-value'
     end
 
     attr = attr or {}
     local ok, err = verify(attr.maxage, attr.secure, attr.httponly,
                            attr.samesite, attr.domain, attr.path)
     if not ok then
-        return nil, 'attr.' .. err
+        error('attr.' .. err, 2)
     end
 
     local c = {
@@ -199,6 +193,9 @@ end
 local Cookie = {}
 Cookie.__index = Cookie
 
+--- bake
+--- @param val string
+--- @return string cookie
 function Cookie:bake(val)
     return bake(self.name, val, self.attr)
 end

@@ -33,21 +33,28 @@ function testcase.bake()
         assert.match(c, v.exp, false)
     end
 
-    -- test that returns error
+    -- test that throws error
     for _, v in ipairs({
         {
             args = {
-                '',
-                '',
+                {},
             },
-            exp = 'name is not valid cookie-name',
+            exp = 'name must be valid cookie-name',
         },
         {
             args = {
                 'foo',
                 'bar;',
             },
-            exp = 'val is not valid cookie-value',
+            exp = 'val must be valid cookie-value',
+        },
+        {
+            args = {
+                'foo',
+                'bar',
+                true,
+            },
+            exp = 'attr must be table',
         },
         {
             args = {
@@ -108,35 +115,6 @@ function testcase.bake()
                 },
             },
             exp = 'attr.path must be string',
-        },
-    }) do
-        local c, err = cookie.bake(unpack(v.args))
-        assert.is_nil(c)
-        assert.match(err, v.exp)
-    end
-
-    -- test that throws error
-    for _, v in ipairs({
-        {
-            args = {
-                true,
-            },
-            exp = 'name must be string',
-        },
-        {
-            args = {
-                '',
-                false,
-            },
-            exp = 'val must be string',
-        },
-        {
-            args = {
-                '',
-                '',
-                true,
-            },
-            exp = 'attr must be table',
         },
     }) do
         local err = assert.throws(cookie.bake, unpack(v.args))

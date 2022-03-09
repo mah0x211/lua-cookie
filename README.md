@@ -7,69 +7,80 @@ lua-cookie
 
 HTTP Cookie utility module.
 
----
 
 ## Installation
 
 ```sh
-luarocks install cookie --from=http://mah0x211.github.io/rocks/
+luarocks install cookie
 ```
 
+---
 
-## Methods
+## tbl = cookie.parse( cookies )
 
-### Parse
+parse a value of the `Cookie` header.
 
-#### tbl, err = cookie.parse( cookies:string )
+**Parameters**
+
+- `cookies:string`: a semicolon `;` separated cookie values.
+
+**Returns**
+
+- `tbl:table`: a table that contains a parsed cookie values.
+
+
+**Example**
 
 ```lua
 local dump = require('dump')
 local cookie = require('cookie')
 local cookiestr = 'cookie1=val1; cookie2=val2'
-local tbl, err = cookie.parse( cookiestr )
+local tbl = cookie.parse(cookiestr)
 
-print( dump( { tbl, err } ) );
---[[ 
-{ 
-    [1] = { 
-        cookie1 = "val1",
-        cookie2 = "val2"
-    }
-}
---]]
+print(dump(tbl))
+-- {
+--     cookie1 = "val1",
+--     cookie2 = "val2"
+-- }
 ```
 
-### Bake
 
-#### str, err = cookie.bake( name:string, val:string [, attr:table] )
+## str = cookie.bake( name, val [, attr] )
+
+create a cookie string.
+
+**Parameters**
+
+- `name:string`: cookie name.
+- `val:string`: cookie value.
+- `attr:table`: cookie attributes.
+  - `domain:string`: append `Domain` attribute.
+  - `path:string`: append `Path` attribute.
+  - `maxage:integer`: append `Max-Age` and `Expires` attributes.
+  - `secure:boolean`: append `Secure` attribute.
+  - `httponly:boolean`: append `HttpOnly` attribute.
+  - `samesite:string`: append `SameSite` attribute.
+
+
+**Returns**
+
+- `str:string`: a cookie string.
+
+
+**Example**
 
 ```lua
-local dump = require('dump')
 local cookie = require('cookie')
-local str, err = cookie.bake( 'example', 'val', {
+local str = cookie.bake('example', 'val', {
     domain = 'example.com',
     path = '/',
     maxage = 1,
     secure = true,
-    httponly = true
+    httponly = true,
+    samesite = 'lax',
 })
 
-print( dump( { str, err } ) )
---[[
-{
-    [1] = "example=val; Expires=Wed, 09 Mar 2022 04:57:19 GMT; Max-Age=1; Domain=example.com; Path=/; Secure; HttpOnly"
-}
---]]
+print(str)
+-- example=val; Expires=Wed, 09 Mar 2022 06:37:15 GMT; Max-Age=1; Domain=example.com; Path=/; SameSite=Lax; Secure; HttpOnly
 ```
-
-**Parameters**
-
-- `name`: string - cookie name.
-- `val`: string - cookie value.
-- `attr`: table - cookie attributes.
-  - `domain`: string - domain name for cookie.
-  - `path`: string - path string for cookie.
-  - `maxage`: int - seconds.
-  - `secure`: boolean - append secure attribute.
-  - `httponly`: boolean - append httponly attribute.
 
