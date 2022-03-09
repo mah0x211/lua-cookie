@@ -60,7 +60,7 @@ jobs:
     -
       name: Install
       run: |
-        luarocks make COVERAGE='--coverage'
+        luarocks make COVERAGE=1
     -
       name: Run Test
       run: |

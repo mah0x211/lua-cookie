@@ -1,22 +1,24 @@
-SRCS=$(wildcard $(SRCDIR)/*.c)
-OBJS=$(SRCS:.c=.o)
-SOBJ=$(SRCS:.c=.so)
+SRCS=$(wildcard src/*.c)
+SOBJ=$(SRCS:.c=.$(LIB_EXTENSION))
 INSTALL?=install
+ifdef COVERAGE
+COVFLAGS=--coverage
+endif
+
 
 .PHONY: all install clean
 
-all: src/istoken.so src/iscookie.so
+all: $(SOBJ)
 
 %.o: %.c
-	$(CC) $(CFLAGS) $(WARNINGS) $(COVERAGE) $(CPPFLAGS) -o $@ -c $<
+	$(CC) $(CFLAGS) $(WARNINGS) $(COVFLAGS) $(CPPFLAGS) -o $@ -c $<
 
 %.$(LIB_EXTENSION): %.o
-	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS) $(PLATFORM_LDFLAGS) $(COVERAGE)
+	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS) $(PLATFORM_LDFLAGS) $(COVFLAGS)
 
-install: src/istoken.$(LIB_EXTENSION) src/iscookie.$(LIB_EXTENSION)
+install: $(SOBJ)
 	$(INSTALL) -d $(INST_LIBDIR)
-	$(INSTALL) src/istoken.$(LIB_EXTENSION) $(INST_LIBDIR)
-	$(INSTALL) src/iscookie.$(LIB_EXTENSION) $(INST_LIBDIR)
+	$(INSTALL) $(SOBJ) $(INST_LIBDIR)
 	$(INSTALL) cookie.lua $(INST_LUADIR)
 	rm -f ./src/*.o
 	rm -f ./src/*.so
