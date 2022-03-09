@@ -161,8 +161,8 @@ local function bake(name, val, attr)
     end
 
     attr = attr or {}
-    local ok, err = verify(attr.maxage, attr.secure, attr.httponly, nil,
-                           attr.domain, attr.path)
+    local ok, err = verify(attr.maxage, attr.secure, attr.httponly,
+                           attr.samesite, attr.domain, attr.path)
     if not ok then
         return nil, 'attr.' .. err
     end
@@ -179,6 +179,9 @@ local function bake(name, val, attr)
     end
     if attr.path then
         c[#c + 1] = 'Path=' .. attr.path
+    end
+    if attr.samesite then
+        c[#c + 1] = 'SameSite=' .. SAMESITE[attr.samesite]
     end
     if attr.secure then
         c[#c + 1] = 'Secure'
@@ -212,8 +215,8 @@ local function new(name, attr)
     end
 
     attr = attr or {}
-    local ok, err = verify(attr.maxage, attr.secure, attr.httponly, nil,
-                           attr.domain, attr.path)
+    local ok, err = verify(attr.maxage, attr.secure, attr.httponly,
+                           attr.samesite, attr.domain, attr.path)
     if not ok then
         error('attr.' .. err, 2)
     end

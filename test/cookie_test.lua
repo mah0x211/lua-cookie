@@ -21,11 +21,12 @@ function testcase.bake()
                     maxage = 1,
                     domain = 'example.com',
                     path = '/',
+                    samesite = 'lax',
                     secure = true,
                     httponly = true,
                 },
             },
-            exp = 'example=val; Expires=[^;]*; Max%-Age=1; Domain=example%.com; Path=/; Secure; HttpOnly',
+            exp = 'example=val; Expires=[^;]*; Max%-Age=1; Domain=example%.com; Path=/; SameSite=Lax; Secure; HttpOnly',
         },
     }) do
         local c = assert(cookie.bake(unpack(v.args)))
@@ -77,6 +78,16 @@ function testcase.bake()
                 },
             },
             exp = 'attr.httponly must be boolean',
+        },
+        {
+            args = {
+                'foo',
+                'bar',
+                {
+                    samesite = {},
+                },
+            },
+            exp = 'attr.samesite must be "strict", "lax" or "none"',
         },
         {
             args = {
@@ -187,4 +198,12 @@ function testcase.new()
         local err = assert.throws(cookie.new, unpack(v.args))
         assert.match(err, v.exp)
     end
+end
+
+function testcase.bake_method()
+    local c = assert(cookie.new('foo'))
+
+    -- test that bake cookie
+    local v = assert(c:bake('barbaz'))
+    assert.equal(v, 'foo=barbaz')
 end
