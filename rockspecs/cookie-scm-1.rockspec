@@ -1,25 +1,31 @@
 package = "cookie"
 version = "scm-1"
 source = {
-    url = "git://github.com/mah0x211/lua-cookie.git"
+    url = "git+https://github.com/mah0x211/lua-cookie.git"
 }
 description = {
     summary = "HTTP Cookie utility",
-    homepage = "https://github.com/mah0x211/lua-cookie", 
+    homepage = "https://github.com/mah0x211/lua-cookie",
     license = "MIT/X11",
-    maintainer = "Masatoshi Teruya"
+    maintainer = "Masatoshi Fukunaga"
 }
 dependencies = {
     "lua >= 5.1",
-    "date >= 2.1.1-1",
-    "halo >= 1.1.0",
-    "rfcvalid >= 0.1.1",
-    "util >= 1.3.2"
+    "lauxhlib >= 0.3.1",
 }
 build = {
-    type = "builtin",
-    modules = {
-        cookie = "cookie.lua",
+    type = 'make',
+    build_variables = {
+        LIB_EXTENSION   = "$(LIB_EXTENSION)",
+        CFLAGS          = "$(CFLAGS)",
+        WARNINGS        = "-Wall -Wno-trigraphs -Wmissing-field-initializers -Wreturn-type -Wmissing-braces -Wparentheses -Wno-switch -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wuninitialized -Wunknown-pragmas -Wshadow -Wsign-compare",
+        CPPFLAGS        = "-I$(LUA_INCDIR)",
+        LDFLAGS         = "$(LIBFLAG)",
+        COVERAGE        = "$(COVERAGE)",
+    },
+    install_variables = {
+        LIB_EXTENSION   = "$(LIB_EXTENSION)",
+        INST_LIBDIR     = "$(LIBDIR)/cookie/",
+        INST_LUADIR     = "$(LUADIR)",
     }
 }
-
