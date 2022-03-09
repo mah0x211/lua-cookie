@@ -18,7 +18,7 @@ function testcase.bake()
                 'example',
                 'val',
                 {
-                    expires = 1,
+                    maxage = 1,
                     domain = 'example.com',
                     path = '/',
                     secure = true,
@@ -53,10 +53,10 @@ function testcase.bake()
                 'foo',
                 'bar',
                 {
-                    expires = 'foo',
+                    maxage = 'foo',
                 },
             },
-            exp = 'attr.expires must be integer',
+            exp = 'attr.maxage must be integer',
         },
         {
             args = {

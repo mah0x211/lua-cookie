@@ -63,7 +63,7 @@ end
 --- @return string err
 local function verify(maxage, secure, httponly, samesite, domain, path)
     if maxage ~= nil and not isfinite(maxage) then
-        return false, 'expires must be integer'
+        return false, 'maxage must be integer'
     elseif secure ~= nil and type(secure) ~= 'boolean' then
         return false, 'secure must be boolean'
     elseif httponly ~= nil and type(httponly) ~= 'boolean' then
@@ -161,7 +161,7 @@ local function bake(name, val, attr)
     end
 
     attr = attr or {}
-    local ok, err = verify(attr.expires, attr.secure, attr.httponly, nil,
+    local ok, err = verify(attr.maxage, attr.secure, attr.httponly, nil,
                            attr.domain, attr.path)
     if not ok then
         return nil, 'attr.' .. err
@@ -170,9 +170,9 @@ local function bake(name, val, attr)
     local c = {
         name .. '=' .. val,
     }
-    if attr.expires then
-        c[#c + 1] = 'Expires=' .. todate(time() + attr.expires)
-        c[#c + 1] = 'Max-Age=' .. tostring(attr.expires)
+    if attr.maxage then
+        c[#c + 1] = 'Expires=' .. todate(time() + attr.maxage)
+        c[#c + 1] = 'Max-Age=' .. tostring(attr.maxage)
     end
     if attr.domain then
         c[#c + 1] = 'Domain=' .. attr.domain
@@ -212,7 +212,7 @@ local function new(name, attr)
     end
 
     attr = attr or {}
-    local ok, err = verify(attr.expires, attr.secure, attr.httponly, nil,
+    local ok, err = verify(attr.maxage, attr.secure, attr.httponly, nil,
                            attr.domain, attr.path)
     if not ok then
         error('attr.' .. err, 2)
