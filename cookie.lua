@@ -1,172 +1,232 @@
---[[
-
-  Copyright (C) 2014 Masatoshi Teruya
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software and associated documentation files (the "Software"), to deal
-  in the Software without restriction, including without limitation the rights
-  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-  copies of the Software, and to permit persons to whom the Software is
-  furnished to do so, subject to the following conditions:
-
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-  THE SOFTWARE.
-
-  cookie.lua
-  Created by Masatoshi Teruya on 14/11/07.
-
---]]
-
--- modules
-local date = require('date');
-local isCookieName = require('rfcvalid.6265').isCookieName;
-local isCookieValue = require('rfcvalid.6265').isCookieValue;
-local typeof = require('util').typeof;
-local EATTR = 'attr.%s must be %s';
+--
+-- Copyright (C) 2014 Masatoshi Teruya
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-- THE SOFTWARE.
+--
+local concat = table.concat
+local date = os.date
+local time = os.time
+local floor = math.floor
+local find = string.find
+local sub = string.sub
+local lower = string.lower
+local upper = string.upper
+local type = type
+local setmetatable = setmetatable
+local istoken = require('cookie.istoken')
+local iscookie = require('cookie.iscookie')
 -- constants
--- attribute names are not case-sensitive
-local ATTRS = {
-    domain = 'string',
-    path = 'string',
-    expires = 'int',
-    secure = 'boolean',
-    httpOnly = 'boolean'
-};
+local DATEFMT = '!%a, %d %b %Y %H:%M:%S GMT'
+local SAMESITE = {}
+for _, v in ipairs({
+    'Strict',
+    'Lax',
+    'None',
+}) do
+    SAMESITE[v], SAMESITE[lower(v)], SAMESITE[upper(v)] = v, v, v
+end
 
+local INF_POS = math.huge
+local INF_NEG = -INF_POS
 
-local function parseAttr( attr, callback )
-    local v;
+-- isfinite
+--- @param v any
+--- @return boolean
+local function isfinite(v)
+    return type(v) == 'number' and v < INF_POS and v > INF_NEG and floor(v) == v
+end
 
-    if not typeof.table( attr ) then
-        return 'attr must be table';
-    elseif not typeof.Function( callback ) then
-        return 'callback must be function';
+--- verify
+--- @param maxage integer
+--- @param secure boolean
+--- @param httponly boolean
+--- @param samesite string
+--- @param domain string
+--- @param path string
+--- @return boolean ok
+--- @return string err
+local function verify(maxage, secure, httponly, samesite, domain, path)
+    if maxage ~= nil and not isfinite(maxage) then
+        return false, 'expires must be integer'
+    elseif secure ~= nil and type(secure) ~= 'boolean' then
+        return false, 'secure must be boolean'
+    elseif httponly ~= nil and type(httponly) ~= 'boolean' then
+        return false, 'httpOnly must be boolean'
+    elseif samesite ~= nil and
+        (type(samesite) ~= 'string' or not SAMESITE[samesite]) then
+        return false, 'samesite must be "strict", "lax" or "none"'
+    elseif domain ~= nil and type(domain) ~= 'string' then
+        return false, 'domain must be string'
+    elseif path ~= nil and type(path) ~= 'string' then
+        return false, 'path must be string'
+    end
+    return true
+end
+
+--- trim_space
+--- @param s string
+--- @return string
+local function trim_space(s)
+    -- remove leading whitespaces
+    local _, pos = find(s, '^%s+')
+    if pos then
+        s = sub(s, pos + 1)
     end
 
-    for k, t in pairs( ATTRS ) do
-        v = attr[k];
-        if v ~= nil then
-            if not typeof[t]( v ) then
-                if t == 'int' then
-                    return EATTR:format( k, 'integer' );
-                else
-                    return EATTR:format( k, t );
-                end
-            -- eliminate a port number
-            elseif k == 'domain' then
-                v = v:match('^[^:]+') or '';
-            end
+    -- remove trailing whitespaces
+    pos = find(s, '%s+$')
+    if pos then
+        return sub(s, 1, pos - 1)
+    end
 
-            err = callback( k, v, t );
-            if err then
-                return err;
+    return s
+end
+
+--- parse
+--- @param cookies string
+--- @return table cookies
+--- @return string err
+local function parse(cookies)
+    if type(cookies) ~= 'string' then
+        error('cookies must be string', 2)
+    elseif sub(cookies, #cookies) ~= ';' then
+        -- append ';' delimiter to tail
+        cookies = cookies .. ';'
+    end
+
+    local tbl = {}
+    local head = 1
+    local tail = find(cookies, ';', head, true)
+    while tail do
+        local c = trim_space(sub(cookies, head, tail - 1))
+
+        if #c > 0 then
+            local sep = find(c, '=', 1, true)
+            if sep then
+                local name = sub(c, 1, sep - 1)
+                local value = sub(c, sep + 1)
+                if istoken(name) and iscookie(value) then
+                    tbl[name] = value
+                end
             end
         end
+
+        head = tail + 1
+        tail = find(cookies, ';', head, true)
     end
+
+    return tbl
 end
 
-
--- class
-local Cookie = require('halo').class.Cookie;
-
-function Cookie.parse( cookies )
-    local tbl = {};
-
-    if not cookies then
-        return tbl;
-    elseif not typeof.string( cookies ) then
-        return nil, 'cookie must be string';
-    end
-
-    for k, v in cookies:gmatch( '([^;%s]+)=([^;]+)' ) do
-        tbl[k] = v;
-    end
-
-    return tbl;
+--- todate
+--- @param v integer
+--- @return string|osdate
+local function todate(v)
+    return date(DATEFMT, v)
 end
 
-
-function Cookie.bake( name, val, attr )
-    local c, err
-
-    -- with trim option
-    name = isCookieName( name, true );
-    if not name then
-        err = 'name must be valid cookie-name string';
-    elseif not isCookieValue( val ) then
-        err = 'val must be valid cookie-value string';
-    else
-        c = name .. '=' .. val;
-        err = parseAttr( attr or {}, function( k, v, t )
-            if t == 'string' then
-                c = c .. '; ' .. k .. '=' .. v;
-            elseif k == 'expires' then
-                local exp = date(true);
-                exp:addseconds( v );
-                exp = exp:fmt('${rfc1123}');
-                c = c .. '; expires=' .. exp .. '; max-age=' .. v;
-            elseif t == 'boolean' and v then
-                c = c .. '; ' .. k;
-            end
-        end);
+--- bake
+--- @param name string
+--- @param val string
+--- @param attr table
+--- @return string cookie
+--- @return string err
+local function bake(name, val, attr)
+    if type(name) ~= 'string' then
+        error('name must be string', 2)
+    elseif type(val) ~= 'string' then
+        error('val must be string', 2)
+    elseif attr ~= nil and type(attr) ~= 'table' then
+        error('attr must be table', 2)
+    elseif not istoken(name) then
+        return nil, 'name is not valid cookie-name'
+    elseif not iscookie(val) then
+        return nil, 'val is not valid cookie-value'
     end
 
-    if err then
-        return nil, err;
+    attr = attr or {}
+    local ok, err = verify(attr.expires, attr.secure, attr.httpOnly, nil,
+                           attr.domain, attr.path)
+    if not ok then
+        return nil, 'attr.' .. err
     end
 
-    return c;
+    local c = {
+        name .. '=' .. val,
+    }
+    if attr.expires then
+        c[#c + 1] = 'Expires=' .. todate(time() + attr.expires)
+        c[#c + 1] = 'Max-Age=' .. tostring(attr.expires)
+    end
+    if attr.domain then
+        c[#c + 1] = 'Domain=' .. attr.domain
+    end
+    if attr.path then
+        c[#c + 1] = 'Path=' .. attr.path
+    end
+    if attr.secure then
+        c[#c + 1] = 'Secure'
+    end
+    if attr.httpOnly then
+        c[#c + 1] = 'HttpOnly'
+    end
+
+    return concat(c, '; ')
 end
 
+--- @class Cookie
+--- @field name string
+--- @field attr table
+local Cookie = {}
+Cookie.__index = Cookie
 
-function Cookie:__index( field )
-    local own = protected(self);
-
-    if field == 'name' then
-        return own.name;
-    end
-
-    return own.attr[field];
+function Cookie:bake(val)
+    return bake(self.name, val, self.attr)
 end
 
-
-function Cookie:init( name, attr )
-    local own = protected(self);
-    local tbl = {};
-    local err;
-
-    if not isCookieName( name ) then
-        err = 'name must be valid cookie-name string';
-    elseif attr then
-        err = parseAttr( attr, function( k, v, t )
-            tbl[k] = v;
-        end);
+--- new
+--- @param name string
+--- @param attr table
+--- @return Cookie c
+local function new(name, attr)
+    if type(name) ~= 'string' or not istoken(name) then
+        error('name must be valid cookie-name string', 2)
+    elseif attr ~= nil and type(attr) ~= 'table' then
+        error('attr must be table', 2)
     end
 
-    if err then
-        return nil, err;
+    attr = attr or {}
+    local ok, err = verify(attr.expires, attr.secure, attr.httpOnly, nil,
+                           attr.domain, attr.path)
+    if not ok then
+        error('attr.' .. err, 2)
     end
-    own.name = name;
-    own.attr = tbl;
 
-    return self;
+    return setmetatable({
+        name = name,
+        attr = attr,
+    }, Cookie)
 end
 
-
-function Cookie:bake( val )
-    local own = protected(self);
-
-    return Cookie.bake( own.name, val, own.attr );
-end
-
-
-return Cookie.exports;
+return {
+    new = new,
+    bake = bake,
+    parse = parse,
+}
 

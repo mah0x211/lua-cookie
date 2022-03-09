@@ -1,15 +1,13 @@
 lua-cookie
 =========
 
+[![test](https://github.com/mah0x211/lua-cookie/actions/workflows/test.yml/badge.svg)](https://github.com/mah0x211/lua-cookie/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/mah0x211/lua-cookie/branch/master/graph/badge.svg)](https://codecov.io/gh/mah0x211/lua-cookie)
+
+
 HTTP Cookie utility module.
 
 ---
-
-## Dependencies
-
-- halo: https://github.com/mah0x211/lua-halo
-- util: https://github.com/mah0x211/lua-util
-- date: https://github.com/Tieske/date
 
 ## Installation
 
@@ -25,12 +23,12 @@ luarocks install cookie --from=http://mah0x211.github.io/rocks/
 #### tbl, err = cookie.parse( cookies:string )
 
 ```lua
-local inspect = require('util').inspect;
-local cookie = require('cookie');
-local cookiestr = 'cookie1=val1; cookie2=val2';
-local tbl, err = cookie.parse( cookiestr );
+local dump = require('dump')
+local cookie = require('cookie')
+local cookiestr = 'cookie1=val1; cookie2=val2'
+local tbl, err = cookie.parse( cookiestr )
 
-print( inspect( { tbl, err } ) );
+print( dump( { tbl, err } ) );
 --[[ 
 { 
     [1] = { 
@@ -46,20 +44,20 @@ print( inspect( { tbl, err } ) );
 #### str, err = cookie.bake( name:string, val:string [, attr:table] )
 
 ```lua
-local inspect = require('util').inspect;
-local cookie = require('cookie');
+local dump = require('dump')
+local cookie = require('cookie')
 local str, err = cookie.bake( 'example', 'val', {
     domain = 'example.com',
     path = '/',
     expires = 1,
     secure = true,
     httpOnly = true
-});
+})
 
-print( inspect( { str, err } ) );
+print( dump( { str, err } ) )
 --[[
-{ 
-    [1] = "example=val; domain=example.com; expires=Thu, 04 Dec 2014 01:23:34 GMT; max-age=Thu, 04 Dec 2014 01:23:34 GMT; httpOnly; path=/; secure"
+{
+    [1] = "example=val; Expires=Wed, 09 Mar 2022 04:57:19 GMT; Max-Age=1; Domain=example.com; Path=/; Secure; HttpOnly"
 }
 --]]
 ```
