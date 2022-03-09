@@ -49,9 +49,9 @@ local cookie = require('cookie')
 local str, err = cookie.bake( 'example', 'val', {
     domain = 'example.com',
     path = '/',
-    expires = 1,
+    maxage = 1,
     secure = true,
-    httpOnly = true
+    httponly = true
 })
 
 print( dump( { str, err } ) )
@@ -69,7 +69,7 @@ print( dump( { str, err } ) )
 - `attr`: table - cookie attributes.
   - `domain`: string - domain name for cookie.
   - `path`: string - path string for cookie.
-  - `expires`: int - seconds.
+  - `maxage`: int - seconds.
   - `secure`: boolean - append secure attribute.
-  - `httpOnly`: boolean - append httpOnly attribute.
+  - `httponly`: boolean - append httponly attribute.
 

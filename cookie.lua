@@ -63,11 +63,11 @@ end
 --- @return string err
 local function verify(maxage, secure, httponly, samesite, domain, path)
     if maxage ~= nil and not isfinite(maxage) then
-        return false, 'expires must be integer'
+        return false, 'maxage must be integer'
     elseif secure ~= nil and type(secure) ~= 'boolean' then
         return false, 'secure must be boolean'
     elseif httponly ~= nil and type(httponly) ~= 'boolean' then
-        return false, 'httpOnly must be boolean'
+        return false, 'httponly must be boolean'
     elseif samesite ~= nil and
         (type(samesite) ~= 'string' or not SAMESITE[samesite]) then
         return false, 'samesite must be "strict", "lax" or "none"'
@@ -161,8 +161,8 @@ local function bake(name, val, attr)
     end
 
     attr = attr or {}
-    local ok, err = verify(attr.expires, attr.secure, attr.httpOnly, nil,
-                           attr.domain, attr.path)
+    local ok, err = verify(attr.maxage, attr.secure, attr.httponly,
+                           attr.samesite, attr.domain, attr.path)
     if not ok then
         return nil, 'attr.' .. err
     end
@@ -170,9 +170,9 @@ local function bake(name, val, attr)
     local c = {
         name .. '=' .. val,
     }
-    if attr.expires then
-        c[#c + 1] = 'Expires=' .. todate(time() + attr.expires)
-        c[#c + 1] = 'Max-Age=' .. tostring(attr.expires)
+    if attr.maxage then
+        c[#c + 1] = 'Expires=' .. todate(time() + attr.maxage)
+        c[#c + 1] = 'Max-Age=' .. tostring(attr.maxage)
     end
     if attr.domain then
         c[#c + 1] = 'Domain=' .. attr.domain
@@ -180,10 +180,13 @@ local function bake(name, val, attr)
     if attr.path then
         c[#c + 1] = 'Path=' .. attr.path
     end
+    if attr.samesite then
+        c[#c + 1] = 'SameSite=' .. SAMESITE[attr.samesite]
+    end
     if attr.secure then
         c[#c + 1] = 'Secure'
     end
-    if attr.httpOnly then
+    if attr.httponly then
         c[#c + 1] = 'HttpOnly'
     end
 
@@ -212,8 +215,8 @@ local function new(name, attr)
     end
 
     attr = attr or {}
-    local ok, err = verify(attr.expires, attr.secure, attr.httpOnly, nil,
-                           attr.domain, attr.path)
+    local ok, err = verify(attr.maxage, attr.secure, attr.httponly,
+                           attr.samesite, attr.domain, attr.path)
     if not ok then
         error('attr.' .. err, 2)
     end

@@ -18,14 +18,15 @@ function testcase.bake()
                 'example',
                 'val',
                 {
-                    expires = 1,
+                    maxage = 1,
                     domain = 'example.com',
                     path = '/',
+                    samesite = 'lax',
                     secure = true,
-                    httpOnly = true,
+                    httponly = true,
                 },
             },
-            exp = 'example=val; Expires=[^;]*; Max%-Age=1; Domain=example%.com; Path=/; Secure; HttpOnly',
+            exp = 'example=val; Expires=[^;]*; Max%-Age=1; Domain=example%.com; Path=/; SameSite=Lax; Secure; HttpOnly',
         },
     }) do
         local c = assert(cookie.bake(unpack(v.args)))
@@ -53,10 +54,10 @@ function testcase.bake()
                 'foo',
                 'bar',
                 {
-                    expires = 'foo',
+                    maxage = 'foo',
                 },
             },
-            exp = 'attr.expires must be integer',
+            exp = 'attr.maxage must be integer',
         },
         {
             args = {
@@ -73,10 +74,20 @@ function testcase.bake()
                 'foo',
                 'bar',
                 {
-                    httpOnly = 'foo',
+                    httponly = 'foo',
                 },
             },
-            exp = 'attr.httpOnly must be boolean',
+            exp = 'attr.httponly must be boolean',
+        },
+        {
+            args = {
+                'foo',
+                'bar',
+                {
+                    samesite = {},
+                },
+            },
+            exp = 'attr.samesite must be "strict", "lax" or "none"',
         },
         {
             args = {
@@ -187,4 +198,12 @@ function testcase.new()
         local err = assert.throws(cookie.new, unpack(v.args))
         assert.match(err, v.exp)
     end
+end
+
+function testcase.bake_method()
+    local c = assert(cookie.new('foo'))
+
+    -- test that bake cookie
+    local v = assert(c:bake('barbaz'))
+    assert.equal(v, 'foo=barbaz')
 end
