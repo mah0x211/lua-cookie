@@ -208,6 +208,7 @@ local function parse(str, baked)
                         --   sane-cookie-date  =
                         --       <IMF-fixdate, defined in [HTTPSEM], Section 5.6.7>
                         --
+                        -- TODO: parse <sane-cookie-date>
                         if v == nil or #v == 0 then
                             return nil, 'invalid "Expires" attribute'
                         end
@@ -290,6 +291,21 @@ local function parse(str, baked)
     end
 
     return tbl
+end
+
+--- parse_baked_cookie
+--- @param str string
+--- @return Cookie cookie
+--- @return string err
+local function parse_baked_cookie(str)
+    return parse(str, true)
+end
+
+--- parse_cookies
+--- @param str string
+--- @return table cookies
+local function parse_cookies(str)
+    return parse(str)
 end
 
 --- todate
@@ -387,5 +403,7 @@ return {
     new = new,
     bake = bake,
     parse = parse,
+    parse_cookies = parse_cookies,
+    parse_baked_cookie = parse_baked_cookie,
 }
 

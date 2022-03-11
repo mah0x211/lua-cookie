@@ -287,6 +287,47 @@ function testcase.parse_with_bake_option()
     assert.match(err, 'baked must be boolean')
 end
 
+function testcase.parse_cookies()
+    -- create cookies
+    local bin = {}
+    for i = 1, 4 do
+        bin[i] = string.format('name%d=val%d', i, i)
+    end
+    local c = table.concat(bin, '; ') .. '  '
+
+    -- test that equivalent to parse(s)
+    local tbl = assert(cookie.parse_cookies(c))
+    for i = 1, 4 do
+        assert.equal(tbl['name' .. i], 'val' .. i)
+    end
+end
+
+function testcase.parse_baked_cookie()
+    -- test that equivalent to parse(s, true)
+    local c = table.concat({
+        'foo= bar',
+        'expires =Fri, 11 Mar 2022 08:03:38 GMT',
+        'Max-age = -01123',
+        'doMain=example.com',
+        'patH=/',
+        'SECURE',
+        'HTTponLy',
+        'samesite=lAx',
+    }, '; ')
+    local tbl = assert(cookie.parse_baked_cookie(c))
+    assert.equal(tbl, {
+        name = 'foo',
+        value = 'bar',
+        expires = 'Fri, 11 Mar 2022 08:03:38 GMT',
+        maxage = -1123,
+        domain = 'example.com',
+        path = '/',
+        secure = true,
+        httponly = true,
+        samesite = 'lax',
+    })
+end
+
 function testcase.new()
     -- test that create a cookie object
     assert(cookie.new('foo'))
