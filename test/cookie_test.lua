@@ -126,7 +126,7 @@ function testcase.parse()
     -- create cookies
     local bin = {}
     for i = 1, 4 do
-        bin[i] = ('name%d=val%d'):format(i, i)
+        bin[i] = string.format('name%d=val%d', i, i)
     end
     local c = table.concat(bin, '; ') .. '  '
 
@@ -141,7 +141,150 @@ function testcase.parse()
 
     -- test that throws an error
     local err = assert.throws(cookie.parse)
-    assert.match(err, 'cookies must be string')
+    assert.match(err, 'str must be string')
+end
+
+function testcase.parse_with_bake_option()
+    -- test that parse set-cookie-value
+    local c = table.concat({
+        'foo= bar',
+        'expires =Fri, 11 Mar 2022 08:03:38 GMT',
+        'Max-age = -01123',
+        'doMain=example.com',
+        'patH=/',
+        'SECURE',
+        'HTTponLy',
+        'samesite=lAx',
+    }, '; ')
+    local tbl = assert(cookie.parse(c, true))
+    assert.equal(tbl, {
+        name = 'foo',
+        value = 'bar',
+        expires = 'Fri, 11 Mar 2022 08:03:38 GMT',
+        maxage = -1123,
+        domain = 'example.com',
+        path = '/',
+        secure = true,
+        httponly = true,
+        samesite = 'lax',
+    })
+
+    -- test that return an error
+    for _, v in ipairs({
+        {
+            val = '',
+            exp = 'invalid "Set-Cookie" value',
+        },
+        {
+            val = '=bar',
+            exp = 'invalid "Set-Cookie" value',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'expires',
+            }, '; '),
+            exp = 'invalid "Expires" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'expires =  ',
+            }, '; '),
+            exp = 'invalid "Expires" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'max-age',
+            }, '; '),
+            exp = 'invalid "Max-Age" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'max-age=  ',
+            }, '; '),
+            exp = 'invalid "Max-Age" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'max-age=foo',
+            }, '; '),
+            exp = 'invalid "Max-Age" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'domain',
+            }, '; '),
+            exp = 'invalid "Domain" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'domain=  ',
+            }, '; '),
+            exp = 'invalid "Domain" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'path=\a ',
+            }, '; '),
+            exp = 'invalid "Path" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'secure= ',
+            }, '; '),
+            exp = 'invalid "Secure" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'httponly  =',
+            }, '; '),
+            exp = 'invalid "HttpOnly" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'samesite',
+            }, '; '),
+            exp = 'invalid "SameSite" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'samesite=',
+            }, '; '),
+            exp = 'invalid "SameSite" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'samesite=invalid-value',
+            }, '; '),
+            exp = 'invalid "SameSite" attribute',
+        },
+        {
+            val = table.concat({
+                'foo= bar',
+                'unknown-attribute=unknown-value',
+            }, '; '),
+            exp = 'unknown "unknown-attribute=unknown-value" attribute',
+        },
+    }) do
+        local _, err = cookie.parse(v.val, true)
+        assert.match(err, v.exp)
+    end
+
+    -- test that throws an error
+    local err = assert.throws(cookie.parse, '', {})
+    assert.match(err, 'baked must be boolean')
 end
 
 function testcase.new()

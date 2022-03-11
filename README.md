@@ -16,17 +16,19 @@ luarocks install cookie
 
 ---
 
-## tbl = cookie.parse( cookies )
+## tbl, err = cookie.parse( str [, baked] )
 
-parse a value of the `Cookie` header.
+parse a value of the `Cookie` or `Set-Cookie` header.
 
 **Parameters**
 
-- `cookies:string`: a semicolon `;` separated cookie values.
+- `str:string`: a semicolon `;` separated cookie values.
+- `baked:boolean`: set `true` to parse a `Set-Cookie` value.
 
 **Returns**
 
 - `tbl:table`: a table that contains a parsed cookie values.
+- `err:string`: error message.
 
 
 **Example**
