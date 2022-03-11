@@ -36,15 +36,40 @@ parse a value of the `Cookie` or `Set-Cookie` header.
 ```lua
 local dump = require('dump')
 local cookie = require('cookie')
-local cookiestr = 'cookie1=val1; cookie2=val2'
-local tbl = cookie.parse(cookiestr)
+local tbl = assert(cookie.parse('cookie1=val1; cookie2=val2'))
 
 print(dump(tbl))
 -- {
 --     cookie1 = "val1",
 --     cookie2 = "val2"
 -- }
+
+tbl = assert(cookie.parse('foo= bar; expires =Fri, 11 Mar 2022 08:03:38 GMT; Max-age = -01123; doMain=example.com; patH=/; SECURE; HTTponLy; samesite=lAx', true)
+print(dump(tbl))
+-- {
+--     domain = "example.com",
+--     expires = "Fri, 11 Mar 2022 08:03:38 GMT",
+--     httponly = true,
+--     maxage = -1123,
+--     name = "foo",
+--     path = "/",
+--     samesite = "lax",
+--     secure = true,
+--     value = "bar"
+-- }
 ```
+
+
+## tbl = cookie.parse_cookies( str )
+
+parse a value of the `Cookie` header.  
+equivalent to `cookie.parse(str)`.
+
+
+## tbl = cookie.parse_baked_cookie( str )
+
+parse a value of the `Set-Cookie` header.  
+equivalent to `cookie.parse(str, true)`.
 
 
 ## str = cookie.bake( name, val [, attr] )
