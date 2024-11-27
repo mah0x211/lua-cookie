@@ -28,7 +28,7 @@ parse a value of the `Cookie` or `Set-Cookie` header.
 **Returns**
 
 - `tbl:table`: a table that contains a parsed cookie values.
-- `err:string`: error message.
+- `err:any`: error message.
 
 
 **Example**
@@ -60,13 +60,13 @@ print(dump(tbl))
 ```
 
 
-## tbl = cookie.parse_cookies( str )
+## tbl, err = cookie.parse_cookies( str )
 
 parse a value of the `Cookie` header.  
 equivalent to `cookie.parse(str)`.
 
 
-## tbl = cookie.parse_baked_cookie( str )
+## tbl, err = cookie.parse_baked_cookie( str )
 
 parse a value of the `Set-Cookie` header.  
 equivalent to `cookie.parse(str, true)`.

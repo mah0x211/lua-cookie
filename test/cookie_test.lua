@@ -1,7 +1,8 @@
 require('luacov')
 local testcase = require('testcase')
-local unpack = require('unpack')
+local assert = require('assert')
 local cookie = require('cookie')
+local unpack = unpack or table.unpack
 
 function testcase.bake()
     -- test that bake cookie
@@ -300,6 +301,10 @@ function testcase.parse_cookies()
     for i = 1, 4 do
         assert.equal(tbl['name' .. i], 'val' .. i)
     end
+
+    -- test that throw error if str is not string
+    local err = assert.throws(cookie.parse_cookies, {})
+    assert.match(err, 'str must be string')
 end
 
 function testcase.parse_baked_cookie()
@@ -326,6 +331,17 @@ function testcase.parse_baked_cookie()
         httponly = true,
         samesite = 'lax',
     })
+
+    -- test that parse baked cookie without cookie-av
+    tbl = assert(cookie.parse_baked_cookie('foo=bar'))
+    assert.equal(tbl, {
+        name = 'foo',
+        value = 'bar',
+    })
+
+    -- test that throws an error if str is not string
+    local err = assert.throws(cookie.parse_baked_cookie, {})
+    assert.re_match(err, 'str must be string')
 end
 
 function testcase.new()
