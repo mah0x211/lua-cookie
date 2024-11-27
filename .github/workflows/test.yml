@@ -13,10 +13,10 @@ jobs:
         submodules: 'true'
     -
       name: Setup Lua
-      uses: leafo/gh-actions-lua@v8.0.0
+      uses: leafo/gh-actions-lua@v9
     -
       name: Setup Luarocks
-      uses: leafo/gh-actions-luarocks@v4.0.0
+      uses: leafo/gh-actions-luarocks@v4
     -
       name: Install Tools
       run: luarocks install luacheck
@@ -34,7 +34,6 @@ jobs:
           - "5.2"
           - "5.3"
           - "5.4"
-          - "luajit-2.0.5"
           - "luajit-openresty"
     steps:
     -
@@ -44,19 +43,18 @@ jobs:
         submodules: 'true'
     -
       name: Setup Lua ${{ matrix.lua-version }}
-      uses: leafo/gh-actions-lua@v8.0.0
+      uses: leafo/gh-actions-lua@v9
       with:
         luaVersion: ${{ matrix.lua-version }}
     -
       name: Setup Luarocks
-      uses: leafo/gh-actions-luarocks@v4.0.0
+      uses: leafo/gh-actions-luarocks@v4
     -
       name: Install Tools
       run: |
         sudo apt install lcov -y
         luarocks install testcase
         luarocks install luacov
-        luarocks install unpack
     -
       name: Install
       run: |
@@ -70,14 +68,8 @@ jobs:
       run: |
         sh ./covgen.sh
     -
-      name: Upload lua coverage to Codecov
-      uses: codecov/codecov-action@v2
+      name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
       with:
-        files: ./luacov.report.out
-        flags: unittests
-    -
-      name: Upload c coverage to Codecov
-      uses: codecov/codecov-action@v2
-      with:
-        files: ./coverage/lcov.info
+        token: ${{ secrets.CODECOV_TOKEN }}
         flags: unittests

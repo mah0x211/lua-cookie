@@ -62,7 +62,7 @@ end
 --- @param domain string
 --- @param path string
 --- @return boolean ok
---- @return string err
+--- @return any err
 local function verify(maxage, secure, httponly, samesite, domain, path)
     if maxage ~= nil and not isfinite(maxage) then
         return false, 'maxage must be integer'
@@ -108,8 +108,8 @@ end
 
 --- split_kvpair
 ---@param s string
----@return string key
----@return string val
+---@return string? key
+---@return string? val
 local function split_kvpair(s)
     if #s > 1 then
         local sep = find(s, '=', 1, true)
@@ -129,160 +129,181 @@ local function split_kvpair(s)
     end
 end
 
---- parse
+--- parse_baked_cookie
 --- @param str string
---- @param baked boolean
---- @return table cookie
---- @return string err
-local function parse(str, baked)
+--- @return Cookie cookie
+--- @return any err
+local function parse_baked_cookie(str)
     if type(str) ~= 'string' then
         error('str must be string', 2)
-    elseif baked ~= nil and type(baked) ~= 'boolean' then
-        error('baked must be boolean', 2)
     elseif sub(str, #str) ~= ';' then
         -- append ';' delimiter to tail
         str = str .. ';'
     end
 
-    ---
-    -- 4.2.  Cookie
-    -- https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-09.txt#section-4.2
     --
-    -- 4.2.1.  Syntax
+    -- 4.1. Set-Cookie
+    -- https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-15#name-set-cookie
     --
-    -- The user agent sends stored cookies to the origin server in the
-    -- Cookie header.  If the server conforms to the requirements in
-    -- Section 4.1 (and the user agent conforms to the requirements in
-    -- Section 5), the user agent will send a Cookie header that conforms to
-    -- the following grammar:
+    -- Informally, the Set-Cookie response header field contains a cookie,
+    -- which begins with a name-value-pair, followed by zero or more
+    -- attribute-value pairs. Servers SHOULD NOT send Set-Cookie header
+    -- fields that fail to conform to the following grammar:
     --
-    --   cookie-header = "Cookie:" SP cookie-string
-    --   cookie-string = cookie-pair *( ";" SP cookie-pair )
+    --   set-cookie        = set-cookie-string
+    --   set-cookie-string = BWS cookie-pair *( BWS ";" OWS cookie-av )
+    --   cookie-pair       = cookie-name BWS "=" BWS cookie-value
     --
+    --   cookie-name  = 1*cookie-octet
+    --   cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
+    --   cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+    --                  / %x80-FF
+    --                ; octets excluding CTLs,
+    --                ; whitespace DQUOTE, comma, semicolon,
+    --                ; and backslash
+    --
+    -- parse cookie-pair
+    local tbl = {}
+    local head = 1
+    local tail = find(str, ';', head, true)
+    local name, value = split_kvpair(trim_space(sub(str, head, tail - 1)))
+    if not name or not istoken(name) or not (value == '' or iscookie(value)) then
+        return nil, 'invalid "Set-Cookie" value'
+    end
+    tbl.name = name
+    tbl.value = value
+
+    -- parse cookie-av
+    head = tail + 1
+    tail = find(str, ';', head, true)
+    while tail do
+        --
+        --   cookie-av  = expires-av / max-age-av / domain-av /
+        --                path-av / secure-av / httponly-av /
+        --                samesite-av / extension-av
+        local av = trim_space(sub(str, head, tail - 1))
+        local k, v = split_kvpair(av)
+        k = lower(k or av)
+
+        if k == 'expires' then
+            --
+            --   expires-av        = "Expires" BWS "=" BWS sane-cookie-date
+            --   sane-cookie-date  =
+            --       <IMF-fixdate, defined in [HTTPSEM], Section 5.6.7>
+            --
+            -- TODO: parse <sane-cookie-date>
+            if v == nil or #v == 0 then
+                return nil, 'invalid "Expires" attribute'
+            end
+        elseif k == 'max-age' then
+            --
+            --   max-age-av     = "Max-Age" BWS "=" BWS non-zero-digit *DIGIT
+            --                  ; In practice, both expires-av and max-age-av
+            --                  ; are limited to dates representable by the
+            --                  ; user agent.
+            --   non-zero-digit = %x31-39
+            --                  ; digits 1 through 9
+            --
+            if v == nil or #v == 0 or not find(v, '^[+%-]?%d%d*$') then
+                return nil, 'invalid "Max-Age" attribute'
+            end
+            v = tointeger(v)
+            k = 'maxage'
+        elseif k == 'domain' then
+            --
+            --   domain-av    = "Domain" BWS "=" BWS domain-value
+            --   domain-value = <subdomain>
+            --                ; defined in [RFC1034], Section 3.5, as
+            --                ; enhanced by [RFC1123], Section 2.1
+            --
+            -- TODO: parse <domain-value>
+            if v == nil or #v == 0 then
+                return nil, 'invalid "Domain" attribute'
+            end
+        elseif k == 'path' then
+            --
+            --   path-av    = "Path" BWS "=" BWS path-value
+            --   path-value = *av-octet
+            --   av-octet   = %x20-3A / %x3C-7E
+            --              ; any CHAR except CTLs or ";"
+            --
+            -- av-octet pattern: ^[a-zA-Z0-9 !"#$%&'()*+,-./:<=>?@[\\\]^_`{|}~]*$
+            if v == nil or
+                (#v > 0 and
+                    not find(v, [[^[%w !"#$%%&'()*+,%-./:<=>?@[\%]^_`{|}~]*$]])) then
+                return nil, 'invalid "Path" attribute'
+            end
+        elseif k == 'secure' or k == 'httponly' then
+            --   secure-av   = "Secure"
+            --   httponly-av = "HttpOnly"
+            if v ~= nil then
+                return nil, 'invalid "' ..
+                           (k == 'secure' and 'Secure' or 'HttpOnly') ..
+                           '" attribute'
+            end
+            v = true
+        elseif k == 'samesite' then
+            --   samesite-av    = "SameSite" BWS "=" BWS samesite-value
+            --   samesite-value = "Strict" / "Lax" / "None"
+            if v then
+                v = lower(v)
+            end
+            if v == nil or not SAMESITE[v] then
+                return nil, 'invalid "SameSite" attribute'
+            end
+        else
+            return nil, format('unknown %q attribute', av)
+        end
+
+        tbl[k] = v
+        head = tail + 1
+        tail = find(str, ';', head, true)
+    end
+
+    return tbl
+end
+
+--- parse_cookies
+--- @param str string
+--- @return table cookies
+--- @return any err
+local function parse_cookies(str)
+    if type(str) ~= 'string' then
+        error('str must be string', 2)
+    elseif sub(str, #str) ~= ';' then
+        -- append ';' delimiter to tail
+        str = str .. ';'
+    end
+
     local tbl = {}
     local head = 1
     local tail = find(str, ';', head, true)
     while tail do
+        ---
+        -- 4.2.  Cookie
+        -- https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-15#name-cookie
         --
-        -- 4.1.1.  Syntax
-        -- https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-09.txt#section-4.1.1
+        -- The user agent sends stored cookies to the origin server in the
+        -- Cookie header field. If the server conforms to the requirements in
+        -- Section 4.1 (and the user agent conforms to the requirements in
+        -- Section 5), the user agent will send a Cookie header field that
+        -- conforms to the following grammar:
         --
-        -- Informally, the Set-Cookie response header field contains a
-        -- cookie, which begins with a name-value-pair, followed by zero or
-        -- more attribute-value pairs.  Servers SHOULD NOT send Set-Cookie
-        -- header fields that fail to conform to the following grammar:
+        -- cookie        = cookie-string
+        -- cookie-string = cookie-pair *( ";" SP cookie-pair )
+        -- cookie-pair   = cookie-name BWS "=" BWS cookie-value
         --
-        --   set-cookie        = set-cookie-string
-        --   set-cookie-string = BWS cookie-pair *( BWS ";" OWS cookie-av )
-        --   cookie-pair       = cookie-name BWS "=" BWS cookie-value
-        --
-        local name, value = split_kvpair(trim_space(sub(str, head, tail - 1)))
-        --
-        --   cookie-name  = 1*cookie-octet
-        --   cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
-        --   cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+        -- cookie-name   = 1*cookie-octet
+        -- cookie-value  = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
+        -- cookie-octet  = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
         --                  / %x80-FF
         --                ; octets excluding CTLs,
         --                ; whitespace DQUOTE, comma, semicolon,
         --                ; and backslash
         --
+        local name, value = split_kvpair(trim_space(sub(str, head, tail - 1)))
         if name and istoken(name) and (value == '' or iscookie(value)) then
-            if baked then
-                tbl.name = name
-                tbl.value = value
-                --
-                --   cookie-av  = expires-av / max-age-av / domain-av /
-                --                path-av / secure-av / httponly-av /
-                --                samesite-av / extension-av
-                -- parse cookie-av
-                head = tail + 1
-                tail = find(str, ';', head, true)
-                while tail do
-                    local av = trim_space(sub(str, head, tail - 1))
-                    local k, v = split_kvpair(av)
-                    k = lower(k or av)
-
-                    if k == 'expires' then
-                        --
-                        --   expires-av        = "Expires" BWS "=" BWS sane-cookie-date
-                        --   sane-cookie-date  =
-                        --       <IMF-fixdate, defined in [HTTPSEM], Section 5.6.7>
-                        --
-                        -- TODO: parse <sane-cookie-date>
-                        if v == nil or #v == 0 then
-                            return nil, 'invalid "Expires" attribute'
-                        end
-                    elseif k == 'max-age' then
-                        --
-                        --   max-age-av     = "Max-Age" BWS "=" BWS non-zero-digit *DIGIT
-                        --                  ; In practice, both expires-av and max-age-av
-                        --                  ; are limited to dates representable by the
-                        --                  ; user agent.
-                        --   non-zero-digit = %x31-39
-                        --                  ; digits 1 through 9
-                        --
-                        if v == nil or #v == 0 or not find(v, '^[+%-]?%d%d*$') then
-                            return nil, 'invalid "Max-Age" attribute'
-                        end
-                        v = tointeger(v)
-                        k = 'maxage'
-                    elseif k == 'domain' then
-                        --
-                        --   domain-av    = "Domain" BWS "=" BWS domain-value
-                        --   domain-value = <subdomain>
-                        --                ; defined in [RFC1034], Section 3.5, as
-                        --                ; enhanced by [RFC1123], Section 2.1
-                        --
-                        -- TODO: parse <domain-value>
-                        if v == nil or #v == 0 then
-                            return nil, 'invalid "Domain" attribute'
-                        end
-                    elseif k == 'path' then
-                        --
-                        --   path-av    = "Path" BWS "=" BWS path-value
-                        --   path-value = *av-octet
-                        --   av-octet   = %x20-3A / %x3C-7E
-                        --              ; any CHAR except CTLs or ";"
-                        --
-                        -- av-octet pattern: ^[a-zA-Z0-9 !"#$%&'()*+,-./:<=>?@[\\\]^_`{|}~]*$
-                        if v == nil or
-                            (#v > 0 and
-                                not find(v,
-                                         [[^[%w !"#$%%&'()*+,%-./:<=>?@[\%]^_`{|}~]*$]])) then
-                            return nil, 'invalid "Path" attribute'
-                        end
-                    elseif k == 'secure' or k == 'httponly' then
-                        --   secure-av   = "Secure"
-                        --   httponly-av = "HttpOnly"
-                        if v ~= nil then
-                            return nil, 'invalid "' ..
-                                       (k == 'secure' and 'Secure' or 'HttpOnly') ..
-                                       '" attribute'
-                        end
-                        v = true
-                    elseif k == 'samesite' then
-                        --   samesite-av    = "SameSite" BWS "=" BWS samesite-value
-                        --   samesite-value = "Strict" / "Lax" / "None"
-                        if v then
-                            v = lower(v)
-                        end
-                        if v == nil or not SAMESITE[v] then
-                            return nil, 'invalid "SameSite" attribute'
-                        end
-                    else
-                        return nil, format('unknown %q attribute', av)
-                    end
-
-                    tbl[k] = v
-                    head = tail + 1
-                    tail = find(str, ';', head, true)
-                end
-
-                return tbl
-            end
             tbl[name] = value
-        elseif baked then
-            return nil, 'invalid "Set-Cookie" value'
         end
 
         -- parse next cookie-pair
@@ -293,19 +314,18 @@ local function parse(str, baked)
     return tbl
 end
 
---- parse_baked_cookie
+--- parse
 --- @param str string
---- @return Cookie cookie
---- @return string err
-local function parse_baked_cookie(str)
-    return parse(str, true)
-end
-
---- parse_cookies
---- @param str string
---- @return table cookies
-local function parse_cookies(str)
-    return parse(str)
+--- @param baked boolean?
+--- @return table cookie
+--- @return any err
+local function parse(str, baked)
+    if baked ~= nil and type(baked) ~= 'boolean' then
+        error('baked must be boolean', 2)
+    elseif baked then
+        return parse_baked_cookie(str)
+    end
+    return parse_cookies(str)
 end
 
 --- todate
