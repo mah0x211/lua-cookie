@@ -20,7 +20,10 @@
  *  DEALINGS IN THE SOFTWARE.
  */
 
-#include <lauxhlib.h>
+// depend
+#include "lauxhlib.h"
+// lua
+#include <lua.h>
 
 /**
  * https://www.ietf.org/rfc/rfc6265.txt
