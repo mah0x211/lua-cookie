@@ -5,18 +5,12 @@ on: [push]
 jobs:
   luacheck:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mah0x211/lua-ci:latest
     steps:
     -
       name: Checkout
       uses: actions/checkout@v2
-      with:
-        submodules: 'true'
-    -
-      name: Setup Lua
-      uses: leafo/gh-actions-lua@v9
-    -
-      name: Setup Luarocks
-      uses: leafo/gh-actions-luarocks@v4
     -
       name: Install Tools
       run: luarocks install luacheck
@@ -26,39 +20,38 @@ jobs:
         luacheck .
 
   test:
+    needs: luacheck
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mah0x211/lua-ci:latest
     strategy:
       matrix:
         lua-version:
-          - "5.1"
-          - "5.2"
-          - "5.3"
-          - "5.4"
-          - "luajit-openresty"
+          - "5.1.:latest"
+          - "5.2.:latest"
+          - "5.3.:latest"
+          - "5.4.:latest"
+          - "lj-v2.1:latest"
     steps:
+    -
+      name: Switch Lua Version
+      run: |
+        lenv -g use ${{ matrix.lua-version }}
+        lua -v || true
     -
       name: Checkout
       uses: actions/checkout@v2
       with:
         submodules: 'true'
     -
-      name: Setup Lua ${{ matrix.lua-version }}
-      uses: leafo/gh-actions-lua@v9
-      with:
-        luaVersion: ${{ matrix.lua-version }}
-    -
-      name: Setup Luarocks
-      uses: leafo/gh-actions-luarocks@v4
-    -
       name: Install Tools
       run: |
-        sudo apt install lcov -y
         luarocks install testcase
         luarocks install luacov
     -
       name: Install
       run: |
-        luarocks make COVERAGE=1
+        COOKIE_COVERAGE=1 luarocks make
     -
       name: Run Test
       run: |
